@@ -15,7 +15,7 @@
 
     <p id="message">1부터 100 사이의 숫자를 맞혀 보세요!</p>
 
-    <form id="guess-form">
+    <form id="guess-form" novalidate>
       <input id="guess-input" type="number" min="1" max="100" placeholder="숫자 입력" autofocus>
       <button id="submit-btn" type="submit">확인</button>
     </form>
@@ -31,7 +31,108 @@
   </main>
 
   <script>
-    // 2단계(기능)에서 작성
+    const MAX_TRIES = 7;
+    const HINT_AFTER_WRONG = 4;
+    const START_MESSAGE = '1부터 100 사이의 숫자를 맞혀 보세요!';
+
+    const form = document.getElementById('guess-form');
+    const input = document.getElementById('guess-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const messageEl = document.getElementById('message');
+    const parityEl = document.getElementById('parity-hint');
+    const attemptsEl = document.getElementById('attempts');
+    const remainingEl = document.getElementById('remaining');
+    const restartBtn = document.getElementById('restart-btn');
+
+    let answer;
+    let attempts;
+    let guesses;
+    let isOver;
+    let isWin;
+    let message;
+    let messageType; // start | up | down | win | fail | error
+
+    function startGame() {
+      answer = Math.floor(Math.random() * 100) + 1;
+      attempts = 0;
+      guesses = [];
+      isOver = false;
+      isWin = false;
+      message = START_MESSAGE;
+      messageType = 'start';
+      input.value = '';
+      render();
+      input.focus();
+    }
+
+    function handleGuess(raw) {
+      const text = raw.trim();
+      if (text === '') {
+        return showError('숫자를 입력하세요');
+      }
+      const num = Number(text);
+      if (!Number.isInteger(num) || num < 1 || num > 100) {
+        return showError('1부터 100 사이의 정수를 입력하세요');
+      }
+      if (guesses.includes(num)) {
+        return showError(`이미 입력한 숫자예요 (${num})`);
+      }
+
+      guesses.push(num);
+      attempts++;
+
+      if (num === answer) {
+        isOver = true;
+        isWin = true;
+        message = `정답입니다! (${attempts}번 만에 맞혔어요)`;
+        messageType = 'win';
+      } else if (attempts >= MAX_TRIES) {
+        isOver = true;
+        message = `실패! 정답은 ${answer}`;
+        messageType = 'fail';
+      } else if (num > answer) {
+        message = '더 작은 수를 입력하세요';
+        messageType = 'down';
+      } else {
+        message = '더 큰 수를 입력하세요';
+        messageType = 'up';
+      }
+    }
+
+    function showError(text) {
+      message = text;
+      messageType = 'error';
+    }
+
+    function render() {
+      messageEl.textContent = message;
+      messageEl.className = messageType;
+
+      const remaining = MAX_TRIES - attempts;
+      attemptsEl.textContent = `시도 횟수: ${attempts}번`;
+      remainingEl.textContent = `남은 기회: ${remaining}번`;
+
+      const wrong = isWin ? attempts - 1 : attempts;
+      const showParity = !isOver && wrong >= HINT_AFTER_WRONG;
+      parityEl.hidden = !showParity;
+      parityEl.textContent = showParity ? (answer % 2 === 0 ? '짝수예요' : '홀수예요') : '';
+
+      input.disabled = isOver;
+      submitBtn.disabled = isOver;
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (isOver) return;
+      handleGuess(input.value);
+      render();
+      input.value = '';
+      if (!isOver) input.focus();
+    });
+
+    restartBtn.addEventListener('click', startGame);
+
+    startGame();
   </script>
 </body>
 </html>
